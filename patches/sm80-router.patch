@@ -1,0 +1,72 @@
+--- a/vllm/model_executor/layers/fused_moe/router/fused_topk_router.py
++++ b/vllm/model_executor/layers/fused_moe/router/fused_topk_router.py
+@@ -14,6 +14,43 @@
+     get_routing_method_type,
+ )
+ from vllm.model_executor.layers.fused_moe.router.base_router import BaseRouter
++from vllm.platforms import current_platform
++from vllm.triton_utils import tl, triton
++
++
++@triton.jit
++def _sm80_top10_softmax(
++    logits_ptr, weights_ptr, ids_ptr, rows_ptr, padding_ptr,
++    NUM_ROWS: tl.constexpr, STRIDE: tl.constexpr, HAS_PADDING: tl.constexpr,
++):
++    row = tl.program_id(0)
++    columns = tl.arange(0, 512)
++    logits = tl.load(logits_ptr + row * STRIDE + columns).to(tl.float32)
++    probabilities = tl.exp(logits - tl.max(logits, 0))
++    probabilities /= tl.sum(probabilities, 0)
++    # Match the CUDA router's nonfinite-score clamp. Select on probabilities,
++    # not logits: underflowed probabilities tie and must prefer lower IDs.
++    probabilities = tl.where(
++        (probabilities == probabilities) & (probabilities < float("inf")),
++        probabilities, 0.0,
++    )
++    slots = tl.arange(0, 16)
++    values = tl.full((16,), 0, tl.float32)
++    indices = tl.full((16,), 0, tl.int32)
++    for slot in tl.static_range(10):
++        best = tl.max(probabilities, 0)
++        expert = tl.min(tl.where(probabilities == best, columns, 2147483647), 0)
++        values = tl.where(slots == slot, best, values)
++        indices = tl.where(slots == slot, expert, indices)
++        probabilities = tl.where(columns == expert, -float("inf"), probabilities)
++    selected_sum = tl.sum(values, 0)
++    values = tl.where(selected_sum > 0, values / selected_sum, 0.0)
++    if HAS_PADDING:
++        indices = tl.where(tl.load(padding_ptr + row), -1, indices)
++    tl.store(weights_ptr + row * 10 + slots, values, slots < 10)
++    tl.store(ids_ptr + row * 10 + slots, indices, slots < 10)
++    tl.store(rows_ptr + row * 10 + slots, slots * NUM_ROWS + row, slots < 10)
++
+ 
+ 
+ def _get_padding_mask(num_tokens: int) -> torch.Tensor | None:
+@@ -30,6 +67,25 @@
+     gating_output: torch.Tensor,
+     renormalize: bool = False,
+ ) -> tuple[torch.Tensor, ...]:
++    if (
++        current_platform.is_device_capability((8, 0))
++        and renormalize
++        and gating_output.dtype == torch.bfloat16
++        and gating_output.shape[1] == 512
++        and gating_output.shape[0] <= 64
++        and gating_output.stride(1) == 1
++        and topk_weights.shape[1] == 10
++        and topk_weights.is_contiguous()
++        and topk_indices.is_contiguous()
++        and token_expert_indices.is_contiguous()
++    ):
++        padding = _get_padding_mask(topk_indices.shape[0])
++        _sm80_top10_softmax[(gating_output.shape[0],)](
++            gating_output, topk_weights, topk_indices, token_expert_indices,
++            padding, gating_output.shape[0], gating_output.stride(0),
++            padding is not None, num_warps=4,
++        )
++        return topk_weights, topk_indices
+     ops.topk_softmax(
+         topk_weights,
+         topk_indices,

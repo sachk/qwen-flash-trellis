@@ -1,0 +1,10 @@
+{#- Prepended to the model's own chat_template.jinja, which accepts only
+    low / medium / xhigh and raises on anything else. Map the OpenAI-style
+    efforts clients send: none turns thinking off, high means xhigh. -#}
+{%- if reasoning_effort is defined and reasoning_effort in ('none', 'off') %}
+    {%- set enable_thinking = false %}
+{%- elif reasoning_effort is defined and reasoning_effort == 'minimal' %}
+    {%- set reasoning_effort = 'low' %}
+{%- elif reasoning_effort is defined and reasoning_effort in ('high', 'max') %}
+    {%- set reasoning_effort = 'xhigh' %}
+{%- endif %}

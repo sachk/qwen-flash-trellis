@@ -1,0 +1,55 @@
+--- a/vllm/model_executor/layers/fused_moe/moe_fused_mul_sum.py
++++ b/vllm/model_executor/layers/fused_moe/moe_fused_mul_sum.py
+@@ -3,6 +3,7 @@
+ import torch
+ from torch._subclasses.fake_tensor import FakeTensor
+ 
++from vllm.platforms import current_platform
+ from vllm.triton_utils import tl, triton
+ 
+ 
+@@ -21,6 +22,7 @@
+     top_k: tl.constexpr,
+     hidden_size: tl.constexpr,
+     BLOCK_K: tl.constexpr,
++    PARALLEL_TILES: tl.constexpr = False,
+ ):
+     # One CTA owns one token's output row. Resolve which slots to sum once per
+     # row (the decision is invariant over hidden tiles); the `if take` branch is
+@@ -57,12 +59,13 @@
+             takes += (True,)  # type: ignore[assignment]
+             weights += (tl.load(w_row + n).to(tl.float32),)  # type: ignore[assignment]
+ 
+-    n_tiles: tl.constexpr = (hidden_size + BLOCK_K - 1) // BLOCK_K
++    n_tiles: tl.constexpr = 1 if PARALLEL_TILES else (hidden_size + BLOCK_K - 1) // BLOCK_K
+     a_row = inputs_ptr + pid_m.to(tl.int64) * stride_m
+     out_row = outputs_ptr + pid_m * hidden_size
+ 
+     for t in tl.range(0, n_tiles):
+-        offs_k = t * BLOCK_K + tl.arange(0, BLOCK_K)
++        tile = tl.program_id(1) if PARALLEL_TILES else t
++        offs_k = tile * BLOCK_K + tl.arange(0, BLOCK_K)
+         kmask = offs_k < hidden_size
+         acc = tl.zeros((BLOCK_K,), dtype=tl.float32)
+         for n in tl.static_range(top_k):
+@@ -150,7 +153,11 @@
+             hidden_size,
+             inputs.element_size(),
+         )
+-        grid = (num_tokens,)
++        parallel_tiles = (
++            current_platform.is_device_capability((8, 0))
++            and hidden_size == 2560 and num_tokens <= 64
++        )
++        grid = (num_tokens, triton.cdiv(hidden_size, BLOCK_K)) if parallel_tiles else (num_tokens,)
+         moe_fused_mul_sum_kernel[grid](
+             inputs,
+             topk_weights,
+@@ -165,6 +172,7 @@
+             top_k,
+             hidden_size,
+             BLOCK_K,
++            PARALLEL_TILES=parallel_tiles,
+             num_warps=num_warps,
+             num_stages=num_stages,
+         )

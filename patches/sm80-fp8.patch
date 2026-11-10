@@ -1,0 +1,118 @@
+--- a/vllm/models/qwen4_exp/nvidia/ops/qsa.py
++++ b/vllm/models/qwen4_exp/nvidia/ops/qsa.py
+@@ -26,6 +26,23 @@
+ def _is_sm90() -> bool:
+     """True on sm_90 (H100/H200/H20): selects the sm_90 tuning table."""
+     return current_platform.get_device_capability() == (9, 0)
++
++
++@lru_cache(maxsize=1)
++def _software_fp8() -> bool:
++    capability = current_platform.get_device_capability()
++    return capability is not None and capability < (8, 9)
++
++
++@triton.jit
++def _decode_e4m3fn(raw):
++    """Decode E4M3FN bytes exactly without an unsupported fp8e4nv IR type."""
++    raw = raw.to(tl.uint32)
++    # Reinterpret E4M3FN as a half with bias 15, then correct its bias by 2**8.
++    # The half's subnormals also scale exactly; no special finite-value path.
++    half_bits = (((raw & 128) << 8) | ((raw & 127) << 7)).to(tl.uint16)
++    value = half_bits.to(tl.float16, bitcast=True).to(tl.float32) * 256.0
++    return tl.where((raw & 127) == 127, float("nan"), value)
+ 
+ 
+ @triton.jit(do_not_specialize=["num_rows", "num_requests"])
+@@ -70,6 +87,7 @@
+     BLOCK_M: tl.constexpr,
+     BLOCK_N: tl.constexpr,
+     IS_FP8: tl.constexpr,
++    SOFTWARE_FP8: tl.constexpr,
+ ) -> None:
+     row = tl.program_id(0)
+     kv_head = tl.program_id(1)
+@@ -151,6 +169,8 @@
+             other=0.0,
+         )
+         if IS_FP8:
++            if SOFTWARE_FP8:
++                keys = _decode_e4m3fn(keys)
+             # e4m3 -> Q dtype is exact; keep the QK dot in Q's dtype (fp8 QK
+             # measured slower here and less accurate).
+             keys = keys.to(query.dtype)
+@@ -166,6 +186,8 @@
+             valid[None, :], tl.math.exp2(scores - next_max[:, None]), 0.0
+         )
+         if IS_FP8:
++            if SOFTWARE_FP8:
++                values = _decode_e4m3fn(values)
+             # Dequant V to fp16 (not bf16) for the PV dot: P <= 1 (online
+             # softmax) so fp16 has the range, its wider mantissa is more
+             # accurate, and the fp8->fp16 upcast with an fp16 PV dot is faster.
+@@ -636,7 +658,13 @@
+     assert head_dim >= 16 and (head_dim & (head_dim - 1)) == 0
+     assert q.dtype == torch.bfloat16
+     assert k_cache.dtype == v_cache.dtype
+-    is_fp8 = k_cache.dtype == torch.float8_e4m3fn
++    is_fp8 = k_cache.dtype in (torch.float8_e4m3fn, torch.uint8)
++    software_fp8 = is_fp8 and _software_fp8()
++    if is_fp8:
++        cache_dtype = torch.uint8 if software_fp8 else torch.float8_e4m3fn
++        if k_cache.dtype != cache_dtype:
++            k_cache = k_cache.view(cache_dtype)
++            v_cache = v_cache.view(cache_dtype)
+     if is_fp8:
+         assert k_scale is not None and v_scale is not None
+         # Host pre-multiply: fold the K dequant scale into the attention scale
+@@ -732,6 +760,7 @@
+         BLOCK_M=block_m,
+         BLOCK_N=block_n,
+         IS_FP8=is_fp8,
++        SOFTWARE_FP8=software_fp8,
+         num_warps=partial_warps,
+         num_stages=2,
+     )
+@@ -768,9 +797,10 @@
+     """Compile every production-reachable split-K/merge specialization."""
+     head_dim = kv_cache.shape[-1] // 2
+     key_cache, value_cache = kv_cache.transpose(1, 2).split(head_dim, dim=-1)
+-    # An fp8 cache is allocated as uint8 and viewed as e4m3 at attention time.
++    # Match the eager path's IR pointer type: Ampere decodes raw E4M3 bytes.
+     is_fp8 = kv_cache.dtype == torch.uint8
+-    cache_dtype = torch.float8_e4m3fn if is_fp8 else key_cache.dtype
++    software_fp8 = is_fp8 and _software_fp8()
++    cache_dtype = (torch.uint8 if software_fp8 else torch.float8_e4m3fn) if is_fp8 else key_cache.dtype
+     num_kv_heads = key_cache.shape[2]
+     group_size = num_query_heads // num_kv_heads
+     block_m = triton.next_power_of_2(group_size)
+@@ -875,6 +905,7 @@
+             BLOCK_M=block_m,
+             BLOCK_N=block_n,
+             IS_FP8=is_fp8,
++            SOFTWARE_FP8=software_fp8,
+             num_warps=warps,
+             num_stages=2,
+             grid=(num_rows, num_kv_heads, num_splits),
+--- a/vllm/models/qwen4_exp/nvidia/qsa.py
++++ b/vllm/models/qwen4_exp/nvidia/qsa.py
+@@ -215,10 +215,7 @@
+         key_cache, value_cache = kv_cache.transpose(1, 2).split(self.head_size, dim=-1)
+         k_scale = v_scale = None
+         if self.kv_cache_dtype in ("fp8", "fp8_e4m3"):
+-            # The cache is allocated as uint8; reinterpret the e4m3 bytes
+-            # (same itemsize, so shape and strides are preserved).
+-            key_cache = key_cache.view(torch.float8_e4m3fn)
+-            value_cache = value_cache.view(torch.float8_e4m3fn)
++            # The attention op chooses raw-byte software decode or native FP8.
+             # Host-side per-tensor dequant scales (Python floats), as used by
+             # other host-scale backends; folded into the kernel's scales.
+             k_scale = layer._k_scale_float
+@@ -226,6 +223,7 @@
+         if query.dtype != torch.bfloat16 or key_cache.dtype not in (
+             torch.bfloat16,
+             torch.float8_e4m3fn,
++            torch.uint8,
+         ):
+             raise NotImplementedError(
+                 "Qwen4Exp QSA requires BF16 Q and BF16 or FP8-e4m3 K/V"

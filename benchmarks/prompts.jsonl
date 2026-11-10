@@ -1,0 +1,2 @@
+{"prompt":"Explain how a hash table handles collisions, comparing separate chaining and open addressing. Discuss deletion, load factors, and adversarial inputs."}
+{"prompt":"Describe a careful method for diagnosing a distributed system that intermittently returns stale reads. Explain which observations distinguish cache invalidation, replica lag, and clock problems."}

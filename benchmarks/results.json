@@ -1,0 +1,24 @@
+{
+  "model": "Qwen3.8-Flash-Next T3a392",
+  "measurement_date": "2026-11-09",
+  "hardware": {"architecture": "Ampere GA100", "compute_capability": "8.0", "gpu": "NVIDIA CMP 170HX", "sms": 74, "vram_gib": 64, "note": "Historical measurements on a non-stock configured card; hardware control tools and settings are deliberately excluded. Other hardware and the portable untuned profile are not benchmarked."},
+  "runtime": {"vllm_revision": "a5a30471ff2bb7f0824f2da10e358af98d304472", "expert_gib": 39.2, "gpu_loaded_weights_gib": 46.16, "kv_pool_gib": 14.6, "aggregate_kv_tokens": 906051, "max_request_tokens": 262144, "expert_scratch_bytes": 58021892, "cuda_graph_gib": 0.60, "max_sequences": 8, "mtp_depth": 3, "draft_vocabulary": 65536, "kv_dtype": "FP8 E4M3", "indexer_dtype": "software FP8", "graph_capture_max_rows": 32},
+  "method": {"rounds_one_stream": 72, "rounds_four_stream": 36, "completion_tokens": 400, "sampling": {"temperature": 1.0, "top_k": 20, "top_p": 0.95}, "note": "Real replay including prefill; compare step time before tokens/s because draft acceptance varies. Private replay data are not distributed."},
+  "pairs": [
+    {"name": "baseline-1", "kv_gib": 14.4, "one_stream_tps": 186.04, "one_stream_ms_step": 14.339, "four_stream_tps_each": 95.38, "four_stream_tps_total": 381.52, "four_stream_ms_step": 28.311, "peak_gpu_mib": 64292},
+    {"name": "deployed-1", "kv_gib": 14.6, "one_stream_tps": 189.25, "one_stream_ms_step": 14.413, "four_stream_tps_each": 95.76, "four_stream_tps_total": 383.04, "four_stream_ms_step": 28.280, "peak_gpu_mib": 64448},
+    {"name": "baseline-2", "kv_gib": 14.4, "one_stream_tps": 184.67, "one_stream_ms_step": 14.435, "four_stream_tps_each": 93.86, "four_stream_tps_total": 375.44, "four_stream_ms_step": 28.345, "peak_gpu_mib": 64292},
+    {"name": "deployed-2", "kv_gib": 14.6, "one_stream_tps": 185.27, "one_stream_ms_step": 14.429, "four_stream_tps_each": 93.87, "four_stream_tps_total": 375.48, "four_stream_ms_step": 28.139, "peak_gpu_mib": 64448}
+  ],
+  "one_stream_prefill_tps_range": [3238, 3265],
+  "server_teacher_forced_kl": {
+    "own_private_replay": {"reference": 0.0919, "deployed": 0.0924},
+    "nemotron": {"reference": 0.0391, "deployed": 0.0391},
+    "multilingual": {"reference": 0.0366, "deployed": 0.0365},
+    "medical": {"reference": 0.0305, "deployed": 0.0312},
+    "legal": {"reference": 0.0273, "deployed": 0.0271}
+  },
+  "quality_method": "Teacher-forced KL against the FP32 source teacher, union of teacher/student top-64 with tail accounting. This is not a blinded task accuracy or subjective quality benchmark. Simulator KL is a separate measurement and must not be mixed with server KL.",
+  "stress": {"simultaneous_long_contexts": 2, "tokens_each": 250000, "followed_by_concurrent_short_streams": 8, "passed": true, "peak_gpu_mib": 64710},
+  "conclusion": "Memory and reliability improvement, not a demonstrated step-time speedup. No overnight experimental quantisation changes are included. 250 single-stream and 500 four-stream-total tokens/s goals were not reached."
+}
