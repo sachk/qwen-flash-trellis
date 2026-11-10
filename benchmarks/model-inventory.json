@@ -1,0 +1,315 @@
+{
+  "files": [
+    {
+      "file": "LICENSE",
+      "bytes": 3235
+    },
+    {
+      "file": "chat_template.jinja",
+      "bytes": 8952
+    },
+    {
+      "file": "config.json",
+      "bytes": 8239486
+    },
+    {
+      "file": "generation_config.json",
+      "bytes": 219
+    },
+    {
+      "file": "merges.txt",
+      "bytes": 3353259
+    },
+    {
+      "file": "model-00001-of-00011.safetensors",
+      "bytes": 102400512288
+    },
+    {
+      "file": "model-00002-of-00011.safetensors",
+      "bytes": 2891369992
+    },
+    {
+      "file": "model-00003-of-00011.safetensors",
+      "bytes": 386965216
+    },
+    {
+      "file": "model-00004-of-00011.safetensors",
+      "bytes": 425843288
+    },
+    {
+      "file": "model-00005-of-00011.safetensors",
+      "bytes": 636575416
+    },
+    {
+      "file": "model-00006-of-00011.safetensors",
+      "bytes": 524320664
+    },
+    {
+      "file": "model-00007-of-00011.safetensors",
+      "bytes": 636575416
+    },
+    {
+      "file": "model-00008-of-00011.safetensors",
+      "bytes": 524320664
+    },
+    {
+      "file": "model-00009-of-00011.safetensors",
+      "bytes": 538098152
+    },
+    {
+      "file": "model-00010-of-00011.safetensors",
+      "bytes": 406079432
+    },
+    {
+      "file": "model-00011-of-00011.safetensors",
+      "bytes": 1192941144
+    },
+    {
+      "file": "model.safetensors.index.json",
+      "bytes": 619062
+    },
+    {
+      "file": "mtp-model-00001-of-00002.safetensors",
+      "bytes": 527759104
+    },
+    {
+      "file": "mtp-model-00002-of-00002.safetensors",
+      "bytes": 898326280
+    },
+    {
+      "file": "mtp-t3.safetensors",
+      "bytes": 983049888
+    },
+    {
+      "file": "mtp_pack_plan.json",
+      "bytes": 70870
+    },
+    {
+      "file": "preprocessor_config.json",
+      "bytes": 443
+    },
+    {
+      "file": "processor_config.json",
+      "bytes": 1220
+    },
+    {
+      "file": "quantization_config.json",
+      "bytes": 7925424
+    },
+    {
+      "file": "t3-L0.safetensors",
+      "bytes": 688547592
+    },
+    {
+      "file": "t3-L1.safetensors",
+      "bytes": 695101192
+    },
+    {
+      "file": "t3-L10.safetensors",
+      "bytes": 733193992
+    },
+    {
+      "file": "t3-L11.safetensors",
+      "bytes": 738518792
+    },
+    {
+      "file": "t3-L12.safetensors",
+      "bytes": 732169992
+    },
+    {
+      "file": "t3-L13.safetensors",
+      "bytes": 731555592
+    },
+    {
+      "file": "t3-L14.safetensors",
+      "bytes": 710461192
+    },
+    {
+      "file": "t3-L15.safetensors",
+      "bytes": 708413192
+    },
+    {
+      "file": "t3-L16.safetensors",
+      "bytes": 878397192
+    },
+    {
+      "file": "t3-L17.safetensors",
+      "bytes": 926525192
+    },
+    {
+      "file": "t3-L18.safetensors",
+      "bytes": 904816392
+    },
+    {
+      "file": "t3-L19.safetensors",
+      "bytes": 927958792
+    },
+    {
+      "file": "t3-L2.safetensors",
+      "bytes": 681174792
+    },
+    {
+      "file": "t3-L20.safetensors",
+      "bytes": 957654792
+    },
+    {
+      "file": "t3-L21.safetensors",
+      "bytes": 956835592
+    },
+    {
+      "file": "t3-L22.safetensors",
+      "bytes": 965846792
+    },
+    {
+      "file": "t3-L23.safetensors",
+      "bytes": 939017992
+    },
+    {
+      "file": "t3-L24.safetensors",
+      "bytes": 941065992
+    },
+    {
+      "file": "t3-L25.safetensors",
+      "bytes": 936355592
+    },
+    {
+      "file": "t3-L26.safetensors",
+      "bytes": 954377992
+    },
+    {
+      "file": "t3-L27.safetensors",
+      "bytes": 955606792
+    },
+    {
+      "file": "t3-L28.safetensors",
+      "bytes": 980592392
+    },
+    {
+      "file": "t3-L29.safetensors",
+      "bytes": 975267592
+    },
+    {
+      "file": "t3-L3.safetensors",
+      "bytes": 708208392
+    },
+    {
+      "file": "t3-L30.safetensors",
+      "bytes": 911984392
+    },
+    {
+      "file": "t3-L31.safetensors",
+      "bytes": 904201992
+    },
+    {
+      "file": "t3-L32.safetensors",
+      "bytes": 973219592
+    },
+    {
+      "file": "t3-L33.safetensors",
+      "bytes": 995133192
+    },
+    {
+      "file": "t3-L34.safetensors",
+      "bytes": 976086792
+    },
+    {
+      "file": "t3-L35.safetensors",
+      "bytes": 989603592
+    },
+    {
+      "file": "t3-L36.safetensors",
+      "bytes": 982025992
+    },
+    {
+      "file": "t3-L37.safetensors",
+      "bytes": 978134792
+    },
+    {
+      "file": "t3-L38.safetensors",
+      "bytes": 985917192
+    },
+    {
+      "file": "t3-L39.safetensors",
+      "bytes": 951715592
+    },
+    {
+      "file": "t3-L4.safetensors",
+      "bytes": 694077192
+    },
+    {
+      "file": "t3-L40.safetensors",
+      "bytes": 975881992
+    },
+    {
+      "file": "t3-L41.safetensors",
+      "bytes": 992880392
+    },
+    {
+      "file": "t3-L42.safetensors",
+      "bytes": 973424392
+    },
+    {
+      "file": "t3-L43.safetensors",
+      "bytes": 989193992
+    },
+    {
+      "file": "t3-L44.safetensors",
+      "bytes": 971376392
+    },
+    {
+      "file": "t3-L45.safetensors",
+      "bytes": 948438792
+    },
+    {
+      "file": "t3-L46.safetensors",
+      "bytes": 923862792
+    },
+    {
+      "file": "t3-L47.safetensors",
+      "bytes": 834569992
+    },
+    {
+      "file": "t3-L5.safetensors",
+      "bytes": 788080392
+    },
+    {
+      "file": "t3-L6.safetensors",
+      "bytes": 785417992
+    },
+    {
+      "file": "t3-L7.safetensors",
+      "bytes": 792585992
+    },
+    {
+      "file": "t3-L8.safetensors",
+      "bytes": 723568392
+    },
+    {
+      "file": "t3-L9.safetensors",
+      "bytes": 721929992
+    },
+    {
+      "file": "t3layers.json",
+      "bytes": 2098
+    },
+    {
+      "file": "tokenizer.json",
+      "bytes": 19989325
+    },
+    {
+      "file": "tokenizer_config.json",
+      "bytes": 1165
+    },
+    {
+      "file": "video_preprocessor_config.json",
+      "bytes": 385
+    },
+    {
+      "file": "vocab.json",
+      "bytes": 6722759
+    }
+  ],
+  "checkpoint_bytes": 155110650462,
+  "weight_files": 62,
+  "note": "Every source safetensors weight file is included. Stale upstream quality/build reports and caches are deliberately excluded; see benchmarks.json for this model's results."
+}

@@ -1,0 +1,15 @@
+{
+  "huggingface_repo": "sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights",
+  "huggingface_public": true,
+  "github_repo": "sachk/qwen-flash-trellis",
+  "github_private": true,
+  "code_release_commit": "c2112c4",
+  "upload_complete": true,
+  "weight_files": 62,
+  "checkpoint_files_verified": 77,
+  "checkpoint_bytes": 155110650462,
+  "missing_files": [],
+  "size_mismatches": {},
+  "verification": "Public Hugging Face tree API compared with model-inventory.json; all expected file sizes match. Files were not re-downloaded for an independent hash check.",
+  "production": "vLLM remained active; final health HTTP 200. No production restart, model replacement or clock change."
+}
