@@ -18,6 +18,8 @@ pipeline_tag: text-generation
 
 > **Quality update:** Further testing has been disappointing: this release scored **75.76% on GPQA Diamond**, with substantial token-limit failures and repetitive output. Earlier KL checks overstated our confidence in reasoning quality. A replacement is planned soon; do not treat this release as near-original quality. Weight-compression and runtime/sampling causes are still being separated.
 
+Replacement research for independent review: [method comparison](https://github.com/sachk/qwen-flash-trellis/blob/master/QUANT-METHOD-REVIEW.md) and [fixed-budget SM80 testbed plan](https://github.com/sachk/qwen-flash-trellis/blob/master/SM80-REQUANT-PLAN.md). These are proposals, not a validated replacement.
+
 Mixed 2/3/4-bit ring-coded trellis quantisation of the routed experts, retaining all 512 experts per layer. Expert packets occupy ~39.2 GiB; loaded GPU model weights were measured at ~46.16 GiB. **46 GiB is not the total VRAM requirement:** the measured serving setup adds a 14.6 GiB KV pool, graphs, workspace and runtime overhead, and requires a 64 GiB-class GPU. The original BF16 PLE stays on SSD rather than GPU memory.
 
 **This is a custom format, not GPTQ/GGUF/AWQ and not a drop-in stock-vLLM model.** It needs the pinned vLLM PLE-SSD patch, trellis loader and CUDA kernels. Companion Nix/code repository: https://github.com/sachk/qwen-flash-trellis (currently private while packaging is validated). Standard `transformers.from_pretrained` and hosted HF inference are not supported by this artifact. Validated kernel architecture is Ampere SM80 (GA100), **not Ada**; other GPUs are unverified.

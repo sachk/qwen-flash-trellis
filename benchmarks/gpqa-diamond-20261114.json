@@ -1,0 +1,83 @@
+{
+  "benchmark": "GPQA Diamond",
+  "measurement_date": "2026-11-14",
+  "model": "Qwen3.8-Flash-Next T3a392",
+  "hardware": "NVIDIA CMP 170HX, 64 GiB, existing production hardware configuration",
+  "dataset": {
+    "questions": 198,
+    "sha256": "41d1213cd7a4998605a26c2798500652572007161b3a92817ba46b35befcd305",
+    "shuffle_seed": 42,
+    "source": "https://openaipublic.blob.core.windows.net/simple-evals/gpqa_diamond.csv"
+  },
+  "protocol": {
+    "streams": 2,
+    "max_tokens": 32768,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20,
+    "min_p": 0.0,
+    "reasoning_effort": "xhigh",
+    "shuffle_seed": 42,
+    "seed_base": 20261114
+  },
+  "sampling": {
+    "samples_per_question": 1,
+    "normal_eos": true,
+    "scoring": "Final answer only; missing/ambiguous answers and completed token-limit failures count incorrect"
+  },
+  "quality": {
+    "valid_quality_result": true,
+    "correct": 150,
+    "questions": 198,
+    "accuracy_percent": 75.75757575757575,
+    "truncated_items": 42,
+    "truncated_percent": 21.21212121212121,
+    "transport_errors": 0,
+    "statuses": {
+      "ok": 156,
+      "empty": 41,
+      "unparsed": 1
+    }
+  },
+  "tokens_all_198_questions": {
+    "prompt_tokens": 62570,
+    "cached_tokens": 0,
+    "completion_tokens": 2558971,
+    "reasoning_tokens": 2511154,
+    "total_tokens": 2621541
+  },
+  "mean_completion_tokens": 12924.09595959596,
+  "performance_recovery_phase": {
+    "new_questions": 184,
+    "retained_questions": 14,
+    "completion_tokens": 2444627,
+    "run_wall_s": 11641.645989103941,
+    "completion_tokens_per_run_s": 209.98980747980667,
+    "completion_tokens_per_stream_s": 105.30851899581936,
+    "note": "Current invocation only, excluding resumed records; aggregate across concurrent streams. Overall token totals include all completed items.",
+    "decode_tps_per_request": {
+      "n": 184,
+      "mean": 127.44465798104646,
+      "median": 131.05437645693007,
+      "min": 49.639100106575796,
+      "max": 164.04088594741975,
+      "p95": 151.24920917014467
+    },
+    "external_successful_requests": 0
+  },
+  "original_model_published_reference": {
+    "accuracy_percent": 91.7,
+    "source": "https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/812d96e10a0dd82b69d749e68693698cf6c36daa/README.md",
+    "matched_protocol": false,
+    "actual_reasoning_tokens": null,
+    "output_token_budget": null,
+    "notes": "Vendor prompt, sampling/aggregation, token budget and actual token usage are unpublished. Identical scores are repeated on the FP8 card; scoring precision is not separately established."
+  },
+  "caveats": [
+    "42 of 198 requests reached the 32768-token cap; this is a budget-specific result, not a measured intrinsic quantization penalty versus the published reference.",
+    "Token totals cover the 198 scored responses, excluding warm-up and abandoned partial streams whose complete usage was not reported. Speed and wall time cover only the 184 newly generated recovery requests.",
+    "An initial infrastructure interruption was caused by a stale service readiness port. Fourteen fully completed attempts, including one token-limit failure, were retained unchanged; only incomplete/unattempted questions were resumed.",
+    "No raw benchmark prompts, answers or reasoning traces are included in this public summary."
+  ],
+  "production_restored": true
+}

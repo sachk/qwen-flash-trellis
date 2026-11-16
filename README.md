@@ -2,9 +2,11 @@
 
 > **Quality update:** Further testing has been disappointing: this release scored **75.76% on GPQA Diamond**, with substantial token-limit failures and repetitive output. Earlier KL checks overstated our confidence in reasoning quality. A replacement is planned soon; do not treat this release as near-original quality. Weight-compression and runtime/sampling causes are still being separated.
 
+Replacement research for independent review: [method comparison](QUANT-METHOD-REVIEW.md) and [fixed-budget SM80 testbed plan](SM80-REQUANT-PLAN.md). These are proposals, not a validated replacement.
+
 Standalone quantisation tools and pinned Nix/vLLM runtime for Qwen3.8-Flash-Next T3a392. The production model retains all 512 routed experts per layer using mixed 2/3/4-bit ring-coded trellis packets. Public weights: [sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights](https://huggingface.co/sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights).
 
-This code repository is initially private. It contains no GPU unlock/overclock tools, firmware, clock/power controls, home-network services, credentials, private conversations or calibration token dumps. SM80 is an **architecture requirement**, not a particular card: the CUDA kernels target Ampere GA100. Other architectures are not validated. Launch occupancy uses device properties, not a fixed SM count. Legacy `KUDA_*` environment names are retained as loader API names only; they do not control hardware.
+This public repository contains no GPU unlock/overclock tools, firmware, clock/power controls, home-network services, credentials, private conversations or calibration token dumps. SM80 is an **architecture requirement**, not a particular card: the CUDA kernels target Ampere GA100. Other architectures are not validated. Launch occupancy uses device properties, not a fixed SM count. Legacy `KUDA_*` environment names are retained as loader API names only; they do not control hardware.
 
 ## Requirements
 
