@@ -67,6 +67,18 @@
    "completion_tokens": 1562066,
    "mean_completion_tokens": 48814.5625,
    "median_completion_tokens": 49828.5
+  },
+  "full_context_259300": {
+   "questions": 198,
+   "correct": 179,
+   "accuracy_percent": 90.4040404040404,
+   "capped": 0,
+   "nan_collapses": 0,
+   "completion_tokens": 3014409,
+   "mean_completion_tokens": 15224,
+   "median_completion_tokens": 8673,
+   "max_completion_tokens": 124295,
+   "description": "As output_cap_98304, with the one question still capped at 98,304 (index 127) rerun with 259,300 completion tokens (2,844-token prompt; full 262,144-token context) and the same seed. It finished on its own at 124,295 tokens and was correct. Equivalent to a full-context run up to batch-level nondeterminism."
   }
  },
  "by_2026_11_14_outcome": {
@@ -1239,7 +1251,11 @@
    "answer_98k": null,
    "correct_98k": false,
    "finish_98k": "length",
-   "completion_tokens_98k": 98304
+   "completion_tokens_98k": 98304,
+   "answer_full_context": "C",
+   "correct_full_context": true,
+   "finish_full_context": "stop",
+   "completion_tokens_full_context": 124295
   },
   {
    "index": 128,

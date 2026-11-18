@@ -22,11 +22,12 @@ Mixed 2/3/4-bit ring-coded trellis quantisation of the routed experts, retaining
 
 | GPQA Diamond | T3a392 | Original model (published) |
 |---|---:|---:|
-| Accuracy | **178/198 (89.90%)** | **91.7%** |
-| Output cap, including reasoning | 98,304 tokens | Not published |
-| Requests reaching the output cap | 1/198 (0.5%) | Not published |
-| Mean / median generated tokens per question | 15,093 / 8,673 | Not published |
-| Generated tokens, including reasoning | 2,988,418 | Not published |
+| Accuracy | **179/198 (90.40%)** | **91.7%** |
+| Output cap, including reasoning | 259,300 tokens (full 262,144-token context) | Not published |
+| Requests reaching the output cap | 0/198 | Not published |
+| Longest response | 124,295 tokens | Not published |
+| Mean / median generated tokens per question | 15,224 / 8,673 | Not published |
+| Generated tokens, including reasoning | 3,014,409 | Not published |
 | NaN/collapsed responses | 0 | — |
 
 | Speed and memory (64 GiB CMP 170HX) | T3a392 |
@@ -43,7 +44,7 @@ Mixed 2/3/4-bit ring-coded trellis quantisation of the routed experts, retaining
 
 Measured 2026-11-18 on stock GPU settings: one sample per question, xhigh reasoning, temperature 1, top-k 20, top-p 0.95, seed 20261114 + question index, eight concurrent streams, production serving configuration. [Measurement record with per-question outcomes](https://github.com/sachk/qwen-flash-trellis/blob/master/benchmarks/gpqa-diamond-20261118.json).
 
-Questions that hit a 32,768-token cap (32/198) were rerun with a 98,304-token cap and identical seeds; every other question finished below 32,768 tokens, so the table equals a 98k-cap run up to batch-level nondeterminism. At a 32,768-token cap the same run scores 159/198 (80.30%). Capped answers count as incorrect. The [official 91.7% reference](https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/812d96e10a0dd82b69d749e68693698cf6c36daa/README.md) does not publish its prompt, sampling, aggregation or token budget, so the gap is **not a measured quantisation penalty**, and one sample per question carries roughly ±2–3 points of sampling noise.
+Questions that hit a 32,768-token cap (32/198) were rerun with a 98,304-token cap and identical seeds; the one question that then hit 98,304 was rerun again with 259,300 tokens (the full 262,144-token context) and finished on its own at 124,295. Every other question finished below the cap it ran under, so the table equals a full-context run up to batch-level nondeterminism. The same run scores 159/198 (80.30%) at a 32,768-token cap and 178/198 (89.90%) at 98,304. Capped answers count as incorrect. The [official 91.7% reference](https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/812d96e10a0dd82b69d749e68693698cf6c36daa/README.md) does not publish its prompt, sampling, aggregation or token budget, so the gap is **not a measured quantisation penalty**, and one sample per question carries roughly ±2–3 points of sampling noise.
 
 Measured 2026-11-18, NVIDIA CMP 170HX (74-SM GA100, 64 GiB HBM) in a stable configuration: SM clock capped at 1400 MHz, stock memory clock. **This card is not yet fully SM- or memory-bus-unlocked**, so these are not full-GA100 figures. No overclocking/unlock code or settings are distributed. Numbers are not promises for other GPUs.
 
