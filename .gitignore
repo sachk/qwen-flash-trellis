@@ -12,3 +12,8 @@ runtime/
 model/
 *.token
 .env
+/local-docs/
+
+.claude/settings.local.json
+diag/.campaign-active
+diag/.stop-guard-blocks

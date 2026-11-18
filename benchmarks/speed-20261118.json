@@ -1,0 +1,62 @@
+{
+ "model": "Qwen3.8-Flash-Next T3a392",
+ "measurement_date": "2026-11-18",
+ "hardware": {
+  "gpu": "NVIDIA CMP 170HX",
+  "architecture": "Ampere GA100",
+  "sms": 74,
+  "vram_gib": 64,
+  "configuration": "stable: SM clock capped at 1400 MHz, stock memory clock; card not yet fully SM- or memory-bus-unlocked",
+  "note": "Hardware control tools and settings are deliberately not distributed."
+ },
+ "runtime": {
+  "vllm_revision": "a5a30471ff2bb7f0824f2da10e358af98d304472",
+  "configuration": "production serving configuration",
+  "nvidia_driver": "615.71.10",
+  "mtp_depth": 3,
+  "draft_vocabulary": 65536,
+  "kv_pool_gib": 14.6,
+  "aggregate_kv_tokens": 906051
+ },
+ "method": {
+  "tool": "scripts/benchmark.py",
+  "prompts": "8 private-traffic prompts truncated to 4,000 tokens (not distributed), each prefixed with a fresh salt token per round",
+  "rounds_one_stream": 72,
+  "rounds_four_stream": 36,
+  "completion_tokens": 400,
+  "sampling": {
+   "temperature": 1.0,
+   "top_k": 20,
+   "top_p": 0.95
+  },
+  "seeds": "3821 + stream index",
+  "note": "Compare step time first; tokens/s moves with draft acceptance. Acceptance counters are server-global; the server had no other traffic."
+ },
+ "phases": {
+  "1": {
+   "streams": 1,
+   "rounds": 72,
+   "decode_tps_each": 166.47424804283185,
+   "decode_tps_total": 166.47424804283185,
+   "prefill_tps": 3073.03128539325,
+   "accepted_per_step": 1.7124576590139255,
+   "estimated_ms_step": 16.293557057041294,
+   "wall_s": 268.0752191120009,
+   "requests": 72,
+   "prompt_tokens_mean": 4001.0
+  },
+  "4": {
+   "streams": 4,
+   "rounds": 36,
+   "decode_tps_each": 88.15693422096483,
+   "decode_tps_total": 352.6277368838593,
+   "prefill_tps": 1005.7691676387586,
+   "accepted_per_step": 1.7008342707161606,
+   "estimated_ms_step": 30.636662839777703,
+   "wall_s": 328.8345893609985,
+   "requests": 144,
+   "prompt_tokens_mean": 4001.0
+  }
+ },
+ "supersedes": "benchmarks/results.json speed figures (2026-11-09), measured on a GPU configuration later found unstable"
+}
