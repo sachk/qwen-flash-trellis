@@ -1,8 +1,8 @@
 {
   "huggingface_repo": "sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights",
   "huggingface_public": true,
-  "huggingface_readme_revision": "7367c53633d88916cf7dc1997ee0fb9bddcc3e4f",
-  "huggingface_readme_sha256": "08959b3241208655c1c0e3e7565b235d712108bbb192d5303e860d4ec519be3b",
+  "huggingface_readme_revision": "4d62850bd0e3b9956164409156e4bfce5fe4db26",
+  "huggingface_readme_sha256": "23abf7bde0c5f53e37d727348ba0d0eba86f4bf2b3cc9b198622705e7f05dfc2",
   "huggingface_gpqa_summary_sha256": "a59d959fb9e064088b3e7014cfae09fc429048f9fe16ee1c6fcc691a3e67f177",
   "github_repo": "sachk/qwen-flash-trellis",
   "code_release_commit": "c2112c4",
@@ -37,5 +37,6 @@
     "hash_mismatches": [],
     "production_restored": true,
     "fresh_performance_or_quality_benchmark": false
-  }
+  },
+  "huggingface_readme_note": "2026-11-18: card updated with stable-configuration GPQA (80.3% at 32k, 89.9% at 98k) and speed (166.5 / 352.6 tok/s); quality warning removed. The 2026-11-14 GPQA summary (gpqa-diamond.json) is retained on the Hub as the superseded record."
 }
