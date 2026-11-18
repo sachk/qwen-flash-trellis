@@ -1,16 +1,19 @@
 # Qwen Flash trellis
 
-Requantisation research, now an efficiency/headroom project rather than a quality fix: [method comparison](QUANT-METHOD-REVIEW.md) and [fixed-budget SM80 testbed plan](SM80-REQUANT-PLAN.md). These are proposals, not a validated replacement.
-
-Standalone quantisation tools and pinned Nix/vLLM runtime for Qwen3.8-Flash-Next T3a392. The production model retains all 512 routed experts per layer using mixed 2/3/4-bit ring-coded trellis packets. Public weights: [sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights](https://huggingface.co/sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights).
-
-This public repository contains no GPU unlock/overclock tools, firmware, clock/power controls, home-network services, credentials, private conversations or calibration token dumps. SM80 is an **architecture requirement**, not a particular card: the CUDA kernels target Ampere GA100. Other architectures are not validated. Launch occupancy uses device properties, not a fixed SM count. Legacy `KUDA_*` environment names are retained as loader API names only; they do not control hardware.
+Qwen3.8-Flash-Next T3a392: all 512 routed experts per layer in mixed 2/3/4-bit ring-coded trellis packets, ~46 GiB GPU-resident. Weights: [sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights](https://huggingface.co/sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights).
 
 ## Benchmarks and quality
 
-Measured 2026-11-18 on a 64 GiB CMP 170HX (GA100) in a stable configuration: SM clock capped at 1400 MHz, stock memory clock. **This card is not yet fully SM- or memory-bus-unlocked** (74 SMs enabled; the memory bus is not fully unlocked), so these are not full-GA100 figures. Hardware settings are deliberately not reproduced by this repo. Record: [`benchmarks/speed-20261118.json`](benchmarks/speed-20261118.json) (withdrawn 2026-11-09 records: [`benchmarks/results.json`](benchmarks/results.json)); the [model card](MODEL_CARD.md) carries the same tables.
+| GPQA Diamond | T3a392 | Original model (published) |
+|---|---:|---:|
+| Accuracy | **178/198 (89.90%)** | **91.7%** |
+| Output cap, including reasoning | 98,304 tokens | Not published |
+| Requests reaching the output cap | 1/198 (0.5%) | Not published |
+| Mean / median generated tokens per question | 15,093 / 8,673 | Not published |
+| Generated tokens, including reasoning | 2,988,418 | Not published |
+| NaN/collapsed responses | 0 | — |
 
-| Metric | Measured result |
+| Speed and memory (64 GiB CMP 170HX) | T3a392 |
 |---|---:|
 | GPU-resident model weights | 46.16 GiB |
 | GPU KV pool | 14.6 GiB |
@@ -22,23 +25,15 @@ Measured 2026-11-18 on a 64 GiB CMP 170HX (GA100) in a stable configuration: SM 
 | Accepted draft tokens per step (1 / 4 streams) | 1.71 / 1.70 |
 | Aggregate KV capacity on a 64 GiB GPU | 906,051 tokens |
 
+Measured 2026-11-18 on stock GPU settings: one sample per question, xhigh reasoning, temperature 1, top-k 20, top-p 0.95, seed 20261114 + question index, eight concurrent streams, production serving configuration. [Measurement record with per-question outcomes](benchmarks/gpqa-diamond-20261118.json).
+
+Questions that hit a 32,768-token cap (32/198) were rerun with a 98,304-token cap and identical seeds; every other question finished below 32,768 tokens, so the table equals a 98k-cap run up to batch-level nondeterminism. At a 32,768-token cap the same run scores 159/198 (80.30%). Capped answers count as incorrect. The [official 91.7% reference](https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/812d96e10a0dd82b69d749e68693698cf6c36daa/README.md) does not publish its prompt, sampling, aggregation or token budget, so the gap is **not a measured quantisation penalty**, and one sample per question carries roughly ±2–3 points of sampling noise.
+
+Measured 2026-11-18 on a 64 GiB CMP 170HX (GA100) in a stable configuration: SM clock capped at 1400 MHz, stock memory clock. **This card is not yet fully SM- or memory-bus-unlocked** (74 SMs enabled; the memory bus is not fully unlocked), so these are not full-GA100 figures. Hardware settings are deliberately not reproduced by this repo. Record: [`benchmarks/speed-20261118.json`](benchmarks/speed-20261118.json) (withdrawn 2026-11-09 records: [`benchmarks/results.json`](benchmarks/results.json)); the [model card](MODEL_CARD.md) carries the same tables.
+
 Real replay with prefill: eight 4,000-token private-traffic prompts, 72/36 rounds at 1/4 streams, 400 generated tokens, temperature 1/top-k 20/top-p .95, production serving configuration. Not directly comparable to endless synthetic completion benchmarks. Tokens/s moves with draft acceptance, so compare step time first. Figures published earlier (2026-11-09) were measured on a GPU configuration later found unstable and are withdrawn.
 
 KV capacity is pooled across requests; the native single-request limit is **262,144 tokens**.
-
-### GPQA Diamond: task score and token use
-
-Measured 2026-11-18 on stock GPU settings: one sample per question, xhigh reasoning, temperature 1, top-k 20, top-p 0.95, seed 20261114 + question index, eight concurrent streams, production serving configuration. [Measurement record with per-question outcomes](benchmarks/gpqa-diamond-20261118.json).
-
-| Metric | 32,768-token cap | 98,304-token cap | Original-model published reference |
-|---|---:|---:|---:|
-| GPQA Diamond accuracy | **159/198 (80.30%)** | **178/198 (89.90%)** | **91.7%** |
-| Requests reaching the output cap | 32/198 (16.2%) | 1/198 (0.5%) | Not published |
-| Generated tokens, including reasoning | 2,474,928 | 2,988,418 | Not published |
-| Mean / median generated tokens per question | 12,500 / 8,673 | 15,093 / 8,673 | Not published |
-| NaN/collapsed responses | 0 | 0 | — |
-
-The 98,304-token column reruns only the 32 capped questions with a larger cap and identical seeds. Every other question finished below 32,768 tokens, so a larger cap would not change it; the column therefore equals a 98k-cap run up to batch-level nondeterminism. Capped answers count as incorrect. The [official 91.7% reference](https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/812d96e10a0dd82b69d749e68693698cf6c36daa/README.md) does not publish its prompt, sampling, aggregation or token budget, so the remaining gap is **not a measured quantisation penalty**, and one sample per question carries roughly ±2–3 points of sampling noise.
 
 **Compared with the AutoRound base.** T3a392 reuses the dense layers of [`klee100/Qwen3.8-Flash-Next-AutoRound-3bpw-MTP`](https://huggingface.co/klee100/Qwen3.8-Flash-Next-AutoRound-3bpw-MTP) and replaces its 3-bpw routed experts. On the same own-traffic teacher-forced evaluation its KL is **0.090 versus 0.168 for AutoRound**, a little over half the divergence. Its last production speed figures on this card were also lower (2026-10-30, same vLLM stack, same stable 1400 MHz clock): 127.35 tok/s single-request and 316.13 tok/s four-request aggregate, on ~8K-token code prompts with 1,024 generated tokens and time to first token included. That is a different workload from the replay table above, so it is not a matched speed ratio. On the matched replay benchmark at the same clock, the first T3 build equalled AutoRound's speed (152.7 tok/s single-stream) with the lower KL. Later runtime work (64K draft vocabulary, expert-kernel tuning, verify-mask kernel) raised T3a392 to the figures above.
 
@@ -47,6 +42,14 @@ The 98,304-token column reruns only the 32 capped questions with a larger cap an
 ### Teacher-forced fidelity
 
 Teacher-forced server KL against the FP32 source teacher was 0.0924 own/private replay, 0.0391 Nemotron, 0.0365 multilingual, 0.0312 medical, 0.0271 legal. This is distribution divergence, **not a task-accuracy or preference benchmark**. The memory update moved each domain by at most 0.0007. Private replay data are not distributed, so outsiders cannot reproduce those exact private-domain numbers. Stress qualification passed two simultaneous 250k-token contexts followed by eight concurrent short streams; peak GPU memory was 64,710 MiB. This does not measure long-context reasoning quality.
+
+## About this repository
+
+Standalone quantisation tools and pinned Nix/vLLM runtime for Qwen3.8-Flash-Next T3a392. The production model retains all 512 routed experts per layer using mixed 2/3/4-bit ring-coded trellis packets. Public weights: [sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights](https://huggingface.co/sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights).
+
+This public repository contains no GPU unlock/overclock tools, firmware, clock/power controls, home-network services, credentials, private conversations or calibration token dumps. SM80 is an **architecture requirement**, not a particular card: the CUDA kernels target Ampere GA100. Other architectures are not validated. Launch occupancy uses device properties, not a fixed SM count. Legacy `KUDA_*` environment names are retained as loader API names only; they do not control hardware.
+
+Requantisation research, now an efficiency/headroom project rather than a quality fix: [method comparison](QUANT-METHOD-REVIEW.md) and [fixed-budget SM80 testbed plan](SM80-REQUANT-PLAN.md). These are proposals, not a validated replacement.
 
 ## Method and references
 
