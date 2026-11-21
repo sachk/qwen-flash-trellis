@@ -1,8 +1,8 @@
 {
   "huggingface_repo": "sachk0/Qwen3.8-Flash-Next-T3a392-Ampere-SM80-46GiB-GPU-Weights",
   "huggingface_public": true,
-  "huggingface_readme_revision": "74804f6546c7506a6a17061dcd0bbf557fcef83c",
-  "huggingface_readme_sha256": "0736a3a0934997bfc5907604ca31ffa1a7d770d9a9a72ce9a04aa3d3e96212f7",
+  "huggingface_readme_revision": "17913b9a8694fcf0bbcd15a1cde954ebce797424",
+  "huggingface_readme_sha256": "a62f971584fba83cd0da60b30490307e6ef7a961e4bed30b927664feb0a4b58d",
   "huggingface_gpqa_summary_sha256": "a59d959fb9e064088b3e7014cfae09fc429048f9fe16ee1c6fcc691a3e67f177",
   "github_repo": "sachk/qwen-flash-trellis",
   "code_release_commit": "c2112c4",
@@ -38,5 +38,5 @@
     "production_restored": true,
     "fresh_performance_or_quality_benchmark": false
   },
-  "huggingface_readme_note": "2026-11-18: card leads with GPQA (179/198, 90.4%, full 262,144-token context; 80.3% at 32,768 and 89.9% at 98,304 noted) and speed (166.5 / 352.6 tok/s) tables; quality warning removed. The 2026-11-14 GPQA summary (gpqa-diamond.json) stays on the Hub as the superseded record."
+  "huggingface_readme_note": "2026-11-21: moved GitHub link to top, added verified third-party GPQA Diamond reruns (Artificial Analysis, ISTA-DASLab BF16, OpenRouter Alibaba API) plus same-backbone quant context table, and tightened prose."
 }

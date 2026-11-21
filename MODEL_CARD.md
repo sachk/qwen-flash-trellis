@@ -16,80 +16,78 @@ pipeline_tag: text-generation
 ---
 # Qwen3.8-Flash-Next T3a392 — Ampere SM80, ~46 GiB GPU-resident weights
 
-Mixed 2/3/4-bit ring-coded trellis quantisation of the routed experts, retaining all 512 experts per layer. Expert packets occupy ~39.2 GiB; loaded GPU model weights were measured at ~46.16 GiB. **46 GiB is not the total VRAM requirement:** the measured serving setup adds a 14.6 GiB KV pool, graphs, workspace and runtime overhead, and requires a 64 GiB-class GPU. The original BF16 PLE stays on SSD rather than GPU memory.
+**Code, pinned runtime & Nix flake:** [github.com/sachk/qwen-flash-trellis](https://github.com/sachk/qwen-flash-trellis)
 
-## Measured quality and performance
+Mixed 2/3/4-bit ring-coded trellis quantisation of all 512 routed experts per layer (~39.2 GiB expert packets; **46.16 GiB** loaded GPU weights). Needs a **64 GiB-class Ampere SM80 (GA100) GPU** (46.16 GiB weights + 14.6 GiB FP8 KV pool + runtime overhead) and fast local SSD for the ~95.37 GiB BF16 PLE table (**~144.46 GiB / 155 GB decimal** total download).
 
-| GPQA Diamond | T3a392 | Original model (published) |
-|---|---:|---:|
-| Accuracy | **179/198 (90.40%)** | **91.7%** |
-| Output cap, including reasoning | 259,300 tokens (full 262,144-token context) | Not published |
-| Requests reaching the output cap | 0/198 | Not published |
-| Longest response | 124,295 tokens | Not published |
-| Mean / median generated tokens per question | 15,224 / 8,673 | Not published |
-| Generated tokens, including reasoning | 3,014,409 | Not published |
-| NaN/collapsed responses | 0 | — |
+> **Custom format, not stock vLLM / GGUF / AWQ.** Requires the companion [vLLM PLE-SSD patch, trellis loader, and SM80 CUDA kernels](https://github.com/sachk/qwen-flash-trellis). Standard `transformers`, hosted HF inference, and non-SM80 GPUs are unsupported/unverified.
 
-| Speed and memory (64 GiB CMP 170HX) | T3a392 |
+## Benchmarks
+
+### GPQA Diamond
+
+| Metric | T3a392 (ours) | [Qwen (published)](https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/812d96e10a0dd82b69d749e68693698cf6c36daa/README.md) | [Artificial Analysis](https://artificialanalysis.ai/models/qwen3-8-flash-next) | [ISTA-DASLab (BF16)](https://huggingface.co/ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF) | [OpenRouter (Alibaba API)](https://openrouter.ai/qwen/qwen3.8-flash) |
+|---|---:|---:|---:|---:|---:|
+| Accuracy | **90.40%** (179/198) | **91.7%** | **92.3%** | **91.92%** (182/198) | **91.41% / 91.33%** |
+| Output cap (incl. reasoning) | 259,300 (full 262k context) | Not published | Provider max | Not published | Not published |
+| Requests hitting cap | 0/198 | — | — | — | — |
+| Mean / median tokens per question | 15,224 / 8,673 | — | 17,606 / — | — | — |
+| Longest response | 124,295 tokens | — | — | — | — |
+| Total generated tokens (198 Q) | 3,014,409 | — | 3,485,931* | — | — |
+| NaN / collapsed responses | 0 | — | — | — | — |
+
+*\*Artificial Analysis canonical single-pass token count: 3,432,440 reasoning + 53,491 answer tokens (60,192 input tokens vs. 62,570 in our run).*
+
+- **Protocol (2026-11-18, stock GPU settings):** 1 sample/question, `xhigh` reasoning, temp 1.0, top-k 20, top-p 0.95, seed `20261114 + idx`, 8 concurrent streams ([full record](https://github.com/sachk/qwen-flash-trellis/blob/master/benchmarks/gpqa-diamond-20261118.json)). Questions capped at 32k (32/198) were rerun at 98k with identical seeds, and the 1 remaining item at 259,300 (finished at 124,295). Scores at intermediate caps: **80.30%** (159/198) at 32k, **89.90%** (178/198) at 98k; capped responses count wrong.
+- **Comparability:** Harnesses differ in prompt, sampling, repeats, and cap (Qwen's 91.7% is repeated identically on its BF16 and FP8 cards without protocol details; OpenRouter reports two Alibaba Cloud Int. endpoints, 1 run each). A single 198-question pass carries ~±2–3 pp sampling noise, so differences across columns are **not a measured quantisation penalty**.
+- **Superseded 2026-11-14 run** (`gpqa-diamond.json`): scored 150/198 (75.76%) at 32k due to rare all-NaN logit steps (~24/h) caused by an unstable non-stock GPU overclock. Stock settings produced 0 NaN events across ~3.5 h and passed a bit-exact GPU stress replay.
+
+#### Same-backbone third-party quants (unmatched protocols, context only)
+
+| Checkpoint | Resident weight footprint | Backend / harness | GPQA Diamond |
+|---|---:|---|---:|
+| **T3a392 (this repo)** | 46.16 GiB loaded GPU weights | vLLM SM80 (ours) | **90.40%** |
+| [turboderp EXL3 SC 2.68 bpw](https://huggingface.co/turboderp/Qwen3.8-Flash-Next-exl3) | ~43.2 GiB shards (excl. n-gram) | TabbyAPI / EvalScope (1 run) | 91.4% (2.18: 89.4%, 3.18: 91.4%, 3.68: 91.9%) |
+| [ISTA-DASLab GSQ-RCO Q2_0](https://huggingface.co/ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF) | 37.6 GB resident shard | llama.cpp | 89.39% (IQ2_XS: 87.37%, IQ3_XXS: 91.41%, IQ3_S: 92.93%) |
+
+### Speed and memory (64 GiB CMP 170HX)
+
+| Metric | T3a392 |
 |---|---:|
 | GPU-resident model weights | 46.16 GiB |
-| GPU KV pool | 14.6 GiB |
-| Aggregate KV capacity on a 64 GiB GPU | 906,051 tokens |
-| One-stream decode | 166.5 tok/s |
-| One-stream step time | 16.29 ms |
-| Four-stream total decode | 352.6 tok/s |
-| Four-stream step time | 30.64 ms |
-| One-stream prefill | 3,073 tok/s |
-| Accepted draft tokens per step (1 / 4 streams) | 1.71 / 1.70 |
+| GPU KV pool (FP8) | 14.6 GiB |
+| Aggregate pooled KV capacity (native max 262,144 / req) | 906,051 tokens |
+| Single-stream decode / step time | 166.5 tok/s / 16.29 ms |
+| Four-stream total decode / step time | 352.6 tok/s / 30.64 ms |
+| Single-stream prefill | 3,073 tok/s |
+| Accepted draft tokens / step (1 / 4 streams, MTP-3) | 1.71 / 1.70 |
 
-Measured 2026-11-18 on stock GPU settings: one sample per question, xhigh reasoning, temperature 1, top-k 20, top-p 0.95, seed 20261114 + question index, eight concurrent streams, production serving configuration. [Measurement record with per-question outcomes](https://github.com/sachk/qwen-flash-trellis/blob/master/benchmarks/gpqa-diamond-20261118.json).
+Measured 2026-11-18 on a 64 GiB CMP 170HX (74 SMs enabled, SM clock capped at 1400 MHz, stock memory clock; not fully SM- or memory-bus-unlocked). Real replay: eight 4k-token private prompts, 72/36 rounds at 1/4 streams, 400 output tokens, temp 1.0/top-k 20/top-p 0.95, 64K draft vocab. Compare step time first (tok/s moves with draft acceptance). Earlier 2026-11-09 numbers from an unstable GPU config are withdrawn.
 
-Questions that hit a 32,768-token cap (32/198) were rerun with a 98,304-token cap and identical seeds; the one question that then hit 98,304 was rerun again with 259,300 tokens (the full 262,144-token context) and finished on its own at 124,295. Every other question finished below the cap it ran under, so the table equals a full-context run up to batch-level nondeterminism. The same run scores 159/198 (80.30%) at a 32,768-token cap and 178/198 (89.90%) at 98,304. Capped answers count as incorrect. The [official 91.7% reference](https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/812d96e10a0dd82b69d749e68693698cf6c36daa/README.md) does not publish its prompt, sampling, aggregation or token budget, so the gap is **not a measured quantisation penalty**, and one sample per question carries roughly ±2–3 points of sampling noise.
+### Teacher-forced fidelity & AutoRound comparison
 
-Measured 2026-11-18, NVIDIA CMP 170HX (74-SM GA100, 64 GiB HBM) in a stable configuration: SM clock capped at 1400 MHz, stock memory clock. **This card is not yet fully SM- or memory-bus-unlocked**, so these are not full-GA100 figures. No overclocking/unlock code or settings are distributed. Numbers are not promises for other GPUs.
+Real-server KL vs. FP32 teacher (top-64 union + tail; lower is better; distribution divergence, not a task benchmark):
 
-Replay uses eight 4,000-token private-traffic prompts, 72 one-stream rounds and 36 four-stream rounds, real text/prefill, 400 generated tokens, temperature 1, top-k 20, top-p 0.95, MTP depth 3 and a 65,536-token draft vocabulary. Tokens/s moves with draft acceptance, so compare step time first. Figures published earlier (2026-11-09) were measured on a GPU configuration later found unstable and are withdrawn.
+| Domain | KL |
+|---|---:|
+| Own/private replay | 0.0924 (vs. 0.168 for AutoRound base) |
+| Nemotron | 0.0391 |
+| Multilingual | 0.0365 |
+| Medical | 0.0312 |
+| Legal | 0.0271 |
 
-KV capacity is pooled across requests; the native single-request limit is **262,144 tokens**.
-
-The last deployed update increased pooled KV capacity from 893,325 to **906,051 tokens (+1.42%)**, reduced expert scratch to 55.33 MiB and removed a 1.15 GiB prefix-copy temporary. It was a **memory/reliability improvement, not a demonstrated decode-speed gain**. The 250 one-stream / 500 four-stream-total tok/s goals were not met.
-
-**Compared with the AutoRound base.** T3a392 reuses the dense layers of [`klee100/Qwen3.8-Flash-Next-AutoRound-3bpw-MTP`](https://huggingface.co/klee100/Qwen3.8-Flash-Next-AutoRound-3bpw-MTP) and replaces its 3-bpw routed experts. On the same own-traffic teacher-forced evaluation its KL is **0.090 versus 0.168 for AutoRound**, a little over half the divergence. Its last production speed figures on this card were also lower (2026-10-30, same vLLM stack, same stable 1400 MHz clock): 127.35 tok/s single-request and 316.13 tok/s four-request aggregate, on ~8K-token code prompts with 1,024 generated tokens and time to first token included. That is a different workload from the performance table above, so it is not a matched speed ratio. On the matched replay benchmark at the same clock, the first T3 build equalled AutoRound's speed (152.7 tok/s single-stream) with the lower KL. Later runtime work (64K draft vocabulary, expert-kernel tuning, verify-mask kernel) raised T3a392 to the performance figures above.
-
-**Superseded 2026-11-14 run** ([record](gpqa-diamond.json)): 150/198 (75.76%) at 32,768 tokens with 42 capped, two streams. That machine's non-stock GPU configuration produced rare all-NaN logit steps (about 24 per hour of long-reasoning decode). Each affected request then emitted token ID 0 until the cap, which appeared as "repetitive output" and token-limit failures. On stock settings the identical software produced no NaN steps in about 3.5 hours of generation, and a model-free bit-exact GPU stress replay passed. Of the 16 questions that collapsed on 11-14, 10 are correct at 32k and 13 at 98k.
-
-## Quality details
-
-### Teacher-forced fidelity
-
-Real-server teacher-forced KL against an FP32 source teacher, estimated over the union of teacher/student top-64 plus a tail term. Lower is better. These are distribution-divergence measurements, **not** task-accuracy, blinded preference or long-context reasoning benchmarks.
-
-| Domain | Reference before memory update | Released serving configuration |
-|---|---:|---:|
-| Own/private replay | 0.0919 | 0.0924 |
-| Nemotron | 0.0391 | 0.0391 |
-| Multilingual | 0.0366 | 0.0365 |
-| Medical | 0.0305 | 0.0312 |
-| Legal | 0.0273 | 0.0271 |
-
-All absolute changes were at most 0.0007, within recorded run noise. This does not establish losslessness against the source model. No failed overnight gain-fitting, native-allocation, scalar-codebook or lattice experiments replace the released production checkpoint. `benchmarks.json` includes both baseline/candidate replay pairs and measurement caveats.
-
-Memory stress passed two simultaneous 250k-token contexts followed by eight short concurrent streams, peak 64,710 MiB GPU use. This is a memory/lifecycle test, not a long-context quality benchmark. Production pack/decode, graph replay, cache-copy regression and applicable Compute Sanitizer checks passed during original qualification.
-
-**This is a custom format, not GPTQ/GGUF/AWQ and not a drop-in stock-vLLM model.** It needs the pinned vLLM PLE-SSD patch, trellis loader and CUDA kernels. Companion Nix/code repository: https://github.com/sachk/qwen-flash-trellis. Standard `transformers.from_pretrained` and hosted HF inference are not supported by this artifact. Validated kernel architecture is Ampere SM80 (GA100), **not Ada**; other GPUs are unverified.
-
-All serving checkpoint weights are included, including the ~102.4 GB decimal PLE shard. Total download is approximately **155 GB decimal (~144 GiB)**, not 39 or 46 GB. See `inventory.json` for exact file sizes. Use a fast local SSD, sufficient free storage, a suitable NVIDIA driver for CUDA 13, and the companion runtime. Native maximum single-request context is **262,144 tokens**; **906,051 tokens is pooled KV capacity across requests**, not a single-request context claim.
-
-Requantisation research, now an efficiency/headroom project rather than a quality fix: [method comparison](https://github.com/sachk/qwen-flash-trellis/blob/master/QUANT-METHOD-REVIEW.md) and [fixed-budget SM80 testbed plan](https://github.com/sachk/qwen-flash-trellis/blob/master/SM80-REQUANT-PLAN.md). These are proposals, not a validated replacement.
+T3a392 reuses the dense/PLE layers of [`klee100/Qwen3.8-Flash-Next-AutoRound-3bpw-MTP`](https://huggingface.co/klee100/Qwen3.8-Flash-Next-AutoRound-3bpw-MTP) and replaces its routed experts, cutting own-replay KL nearly in half (0.090 vs. 0.168) while exceeding its throughput (166.5 vs. 152.7 tok/s on matched early replay). Memory stress passed two simultaneous 250k contexts + eight short streams (peak 64,710 MiB).
 
 ## Format and references
 
-Expert weights are ring-coded trellis packets on a custom 4-state trellis code: each ring tail-bits through a unit's packet words, so the closed path pays no start/end boundary-state overhead, and the trellis's constrained reconstruction levels give richer quality per transmitted bit than scalar quantisation at the same rate. Rings are packed by Hessian-aware Viterbi rounding with per-expert second-order costs and sequential error feedback, in the spirit of GPTQ's objective. This pipeline is custom, not stock QTIP: no QTIP randomized-Hadamard incoherence processing (RHT), 1MAD/3INST decode settings, or QuIP#/GLQ lattice codebooks are used. Kernel decode is bit-exact with tensor-core-friendly packet layouts; that is a design property, not a speed guarantee on other GPUs.
+Routed experts use custom **ring-coded 4-state trellis packets** (mixed 2/3/4-bit payloads, tail-biting loops with zero boundary-state overhead) packed by Hessian-aware Viterbi rounding with sequential error feedback. Decode is bit-exact with tensor-core-friendly layouts. Custom to this repo—not stock QTIP (no RHT or 1MAD/3INST) and no QuIP#/GLQ codebooks. Further efficiency/headroom research: [method review](https://github.com/sachk/qwen-flash-trellis/blob/master/QUANT-METHOD-REVIEW.md), [SM80 testbed plan](https://github.com/sachk/qwen-flash-trellis/blob/master/SM80-REQUANT-PLAN.md).
 
-References: A. Tseng, Q. Sun, D. Hou, C. De Sa, "QTIP: Quantization with Trellises and Incoherence Processing," NeurIPS 2024, [arXiv:2406.11235](https://arxiv.org/abs/2406.11235) (hardware-efficient parallel trellis/computed codes; tail-biting, §3.2). E. Frantar, S. Ashkboos, T. Hoefler, D. Alistarh, "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers," ICLR 2023, [arXiv:2210.17323](https://arxiv.org/abs/2210.17323) (second-order objective and error compensation). M. W. Marcellin, T. R. Fischer, "Trellis Coded Quantization of Memoryless and Gauss-Markov Sources," IEEE Transactions on Communications 38(1):82–93, 1990, [doi:10.1109/26.46532](https://doi.org/10.1109/26.46532) (original TCQ).
+References: Tseng et al., *QTIP* (NeurIPS 2024, [arXiv:2406.11235](https://arxiv.org/abs/2406.11235)); Frantar et al., *GPTQ* (ICLR 2023, [arXiv:2210.17323](https://arxiv.org/abs/2210.17323)); Marcellin & Fischer, *TCQ* (IEEE TCOMM 1990, [doi:10.1109/26.46532](https://doi.org/10.1109/26.46532)).
 
 ## Provenance and licensing
 
-FP8 source: `Qwen/Qwen3.8-Flash-Next-FP8` at `236dfdf285828023ca3bcd3f37366c58a3469b13`. Dense/PLE base: `klee100/Qwen3.8-Flash-Next-AutoRound-3bpw-MTP` at `ce0e0b94083895bd836b916f29bf105c40a8162a`. vLLM revision: `a5a30471ff2bb7f0824f2da10e358af98d304472`.
-
-Weights retain the **Qwen Community License 1.0**, reproduced in `LICENSE`. It is **not Apache-2.0/MIT**: commercial Model-as-a-Service / AI Work Assistant businesses have additional licensing requirements; read the full license. Preserve source notices. Calibration included private traffic; raw conversations, tokens, traces, credentials and private session identifiers are not distributed. Public-only recalibration can reproduce the procedure, not the exact calibration statistics or checkpoint bytes.
+- **FP8 source:** `Qwen/Qwen3.8-Flash-Next-FP8` @ `236dfdf285828023ca3bcd3f37366c58a3469b13`
+- **Dense/PLE base:** `klee100/Qwen3.8-Flash-Next-AutoRound-3bpw-MTP` @ `ce0e0b94083895bd836b916f29bf105c40a8162a`
+- **vLLM pin:** `a5a30471ff2bb7f0824f2da10e358af98d304472`
+- **Files:** 62 safetensors shards (~144.46 GiB / 155 GB decimal incl. ~102.4 GB PLE shard); see `inventory.json`.
+- **License:** Weights retain **Qwen Community License 1.0** (`LICENSE`), not Apache-2.0/MIT (commercial MaaS / AI Work Assistant terms apply). Calibration included private traffic; raw private data is not distributed.
